@@ -1,0 +1,927 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="theme-color" content="#111827" />
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+
+  <title>Meal Logger</title>
+  <style>
+    :root{--bg:#0b1220;--muted:#94a3b8;--text:#e5e7eb;--accent:#22c55e;--danger:#ef4444;--line:#1f2937;--blue:#3b82f6;}
+    *{box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+    body{margin:0;background:linear-gradient(180deg,#070b14,var(--bg));color:var(--text)}
+    .wrap{max-width:1120px;margin:0 auto;padding:18px}
+    .title{display:flex;align-items:center;justify-content:space-between;gap:12px}
+    h1{font-size:20px;margin:0;letter-spacing:.2px}
+    .pill{font-size:12px;color:var(--muted);border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+    .grid{display:grid;grid-template-columns:1.15fr .85fr;gap:14px;margin-top:14px}
+    @media (max-width:950px){.grid{grid-template-columns:1fr}}
+    .card{background:rgba(17,24,39,.9);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    @media (max-width:560px){.row{grid-template-columns:1fr}}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input,select,textarea{width:100%;padding:10px 12px;border-radius:12px;border:1px solid #263145;background:#0b1220;color:var(--text);outline:none}
+    textarea{min-height:96px;resize:vertical}
+    input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+    .btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px}
+    button{border:0;border-radius:12px;padding:10px 12px;background:#1f2937;color:var(--text);cursor:pointer}
+    button.primary{background:var(--accent);color:#06240f;font-weight:700}
+    button.danger{background:rgba(239,68,68,.14);color:#fecaca;border:1px solid rgba(239,68,68,.3)}
+    button.ghost{background:transparent;border:1px solid var(--line);color:var(--text)}
+    button.smallBtn{padding:8px 10px;border-radius:999px;font-size:12px}
+    .hint{font-size:12px;color:var(--muted);margin-top:10px;line-height:1.45}
+    .list{display:flex;flex-direction:column;gap:10px}
+    .entry{border:1px solid var(--line);border-radius:14px;padding:12px;background:rgba(11,18,32,.65)}
+    .entryTop{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .badge{font-size:12px;padding:5px 10px;border-radius:999px;border:1px solid var(--line);color:#cbd5e1}
+    .meta{font-size:12px;color:var(--muted)}
+    .items{margin-top:10px;font-size:14px;white-space:pre-wrap;line-height:1.5}
+    .split{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+    .kpi{padding:8px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(17,24,39,.6);font-size:12px;color:#cbd5e1}
+    .kpi b{color:var(--text)}
+    .divider{height:1px;background:var(--line);margin:12px 0}
+    .macrosGrid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px;margin-top:10px}
+    @media (max-width:640px){.macrosGrid{grid-template-columns:1fr 1fr}}
+    .waterBtns{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+    .toast{position:fixed;left:50%;bottom:16px;transform:translateX(-50%);background:#0b1220;border:1px solid var(--line);padding:10px 12px;border-radius:999px;color:#e5e7eb;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s}
+    .toast.show{opacity:1}
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;padding:16px;z-index:9999}
+    .modalBack.show{display:flex}
+    .modal{width:min(860px,100%);background:rgba(17,24,39,.98);border:1px solid var(--line);border-radius:18px;padding:14px;box-shadow:0 20px 60px rgba(0,0,0,.45)}
+    .modalHead{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .modalHead h2{font-size:16px;margin:0}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="title">
+      <h1>Meal Logger</h1>
+      <div class="split">
+        <div class="pill" id="statusPill">Stored on this device</div>
+        <button class="ghost" id="settingsBtn" type="button">Settings</button>
+      </div>
+    </div>
+
+    <div class="grid">
+      <div class="card">
+        <div class="row">
+          <div>
+            <label>Date</label>
+            <input id="date" type="date" />
+          </div>
+          <div>
+            <label>Section</label>
+            <select id="section">
+              <option>Breakfast</option>
+              <option>Lunch</option>
+              <option>Snack</option>
+              <option>Dinner</option>
+              <option>Water</option>
+              <option>Other</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:10px">
+          <div id="waterBox" style="display:none">
+            <label>Water (ml)</label>
+            <div class="row" style="grid-template-columns:1fr 1fr;gap:10px">
+              <div><input id="waterMl" inputmode="numeric" placeholder="e.g., 500" /></div>
+              <div>
+                <select id="waterPreset" aria-label="Water preset">
+                  <option value="">Preset</option>
+                  <option value="250">250 ml</option>
+                  <option value="500">500 ml</option>
+                  <option value="750">750 ml</option>
+                  <option value="1000">1000 ml</option>
+                </select>
+              </div>
+            </div>
+            <div class="waterBtns" id="waterBtns"></div>
+          </div>
+          <div>
+            <label>Time (optional)</label>
+            <input id="time" type="time" />
+          </div>
+        </div>
+
+        <div style="margin-top:10px" id="foodBox">
+          <div class="hint">
+            Paste the meal text + macros exactly as GPT gives it. Tap <b>Parse + fill</b>, then <b>Add entry</b>.
+            You can also skip Parse and hit Add entry. It will auto-parse.
+          </div>
+
+          <textarea id="macroPaste" placeholder="Example:
+MEAL: Breakfast Food:
+2 whole eggs
+2 egg whites
+1 banana
+Macros: kcal 420 | P 32g | C 28g | F 18g"></textarea>
+
+          <div class="btns" style="margin-top:10px">
+            <button class="ghost" id="parseBtn" type="button">Parse + fill</button>
+            <button class="ghost" id="clearPasteBtn" type="button">Clear paste</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="row">
+            <div>
+              <label>Items (editable)</label>
+              <textarea id="items" placeholder="Auto-filled from paste. One per line."></textarea>
+            </div>
+            <div>
+              <label>Macros (editable)</label>
+              <div class="macrosGrid" style="margin-top:0">
+                <div><label>Calories (kcal)</label><input id="mKcal" inputmode="numeric" placeholder="auto" /></div>
+                <div><label>Protein (g)</label><input id="mP" inputmode="numeric" placeholder="auto" /></div>
+                <div><label>Carbs (g)</label><input id="mC" inputmode="numeric" placeholder="auto" /></div>
+                <div><label>Fat (g)</label><input id="mF" inputmode="numeric" placeholder="auto" /></div>
+              </div>
+              <div class="hint" id="parseHint"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btns">
+          <button class="primary" id="addBtn" type="button">Add entry</button>
+          <button class="ghost" id="closeDayBtn" type="button">Close day</button>
+          <button class="ghost" id="copyBtn" type="button">Copy export</button>
+          <button class="danger" id="clearBtn" type="button">Clear day</button>
+        </div>
+
+        <div class="hint">This is a tracker. It cannot push directly into Fitbit/Whoop. Use the export to paste into your device log.</div>
+      </div>
+
+      <div class="card">
+        <div class="split" style="margin-bottom:10px">
+          <div class="kpi">Consumed: <b id="kpiKcal">0</b> kcal</div>
+          <div class="kpi">Remaining: <b id="kpiKcalRem">—</b> kcal</div>
+          <div class="kpi">Water: <b id="kpiWater">0</b> ml (<span id="kpiWaterRem">—</span> left)</div>
+        </div>
+
+        <div class="split" style="margin-bottom:10px">
+          <div class="kpi">Protein: <b id="kpiP">0</b> g (<span id="kpiPRem">—</span> left)</div>
+          <div class="kpi">Carbs: <b id="kpiC">0</b> g (<span id="kpiCRem">—</span> left)</div>
+          <div class="kpi">Fat: <b id="kpiF">0</b> g (<span id="kpiFRem">—</span> left)</div>
+        </div>
+
+        <div class="hint" id="targetsHint"></div>
+
+        <div class="divider"></div>
+
+        <div class="meta" id="todayLabel"></div>
+        <div style="height:10px"></div>
+
+        <div class="meta">Entries</div>
+        <div style="height:10px"></div>
+        <div class="list" id="list"></div>
+
+        <div style="height:12px"></div>
+        <div class="split" style="justify-content:space-between; margin-top:12px">
+          <div style="min-width:220px">
+            <label>Export format</label>
+            <select id="exportFormat">
+              <option value="gpt">GPT style (meal blocks)</option>
+              <option value="dayclose">Day close (totals + remaining)</option>
+              <option value="simple">Simple (one line per entry)</option>
+              <option value="csv">CSV (for Sheets)</option>
+            </select>
+          </div>
+          <div class="btns" style="margin-top:18px">
+            <button class="ghost" id="refreshExportBtn" type="button">Refresh</button>
+          </div>
+        </div>
+        <label style="margin-top:10px">Export preview</label>
+        <textarea id="export" readonly placeholder="Export appears here"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Copied</div>
+
+  <div class="modalBack" id="settingsModal" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-label="Settings">
+      <div class="modalHead">
+        <h2>Settings</h2>
+        <button class="ghost" id="closeSettingsBtn" type="button">Close</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="meta">Daily targets</div>
+      <div class="hint">Set these so the app can show you what is remaining after each entry.</div>
+
+      <div class="macrosGrid" style="margin-top:10px">
+        <div><label>Calories target (kcal)</label><input id="tKcal" inputmode="numeric" placeholder="e.g., 1800" /></div>
+        <div><label>Protein target (g)</label><input id="tP" inputmode="numeric" placeholder="e.g., 165" /></div>
+        <div><label>Carbs target (g)</label><input id="tC" inputmode="numeric" placeholder="e.g., 150" /></div>
+        <div><label>Fat target (g)</label><input id="tF" inputmode="numeric" placeholder="e.g., 60" /></div>
+        <div><label>Water target (ml)</label><input id="tWater" inputmode="numeric" placeholder="e.g., 3000" /></div>
+      </div>
+
+      <div class="btns">
+        <button class="primary" id="saveSettingsBtn" type="button">Save</button>
+        <button class="ghost" id="resetTargetsBtn" type="button">Reset targets</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // Register service worker (PWA offline caching)
+  (function(){
+    if(!('serviceWorker' in navigator)) return;
+    window.addEventListener('load', async ()=>{
+      try{
+        await navigator.serviceWorker.register('./sw.js', { scope: './' });
+      }catch(e){
+        // Silent fail: app still works without SW
+        console.debug('SW register failed', e);
+      }
+    });
+  })();
+
+  const NL = "\n";
+  const $ = (id)=>document.getElementById(id);
+  const STORAGE_KEY = "meal_logger_pwa_v1";
+
+  function isoToday(){
+    const d = new Date();
+    const tzOffset = d.getTimezoneOffset()*60000;
+    return new Date(d - tzOffset).toISOString().slice(0,10);
+  }
+
+  function toast(msg){
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    setTimeout(()=>t.classList.remove("show"), 1200);
+  }
+
+  function loadState(){
+    try{ return JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}"); }
+    catch{ return {}; }
+  }
+
+  function saveState(state){
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  }
+
+  function ensureState(state){
+    state.days = state.days || {};
+    state.targets = state.targets || { kcal:null, p:null, c:null, f:null, water:null };
+    return state;
+  }
+
+  function ensureDay(state, day){
+    ensureState(state);
+    state.days[day] = state.days[day] || { entries: [] };
+    return state;
+  }
+
+  function getDayKey(dateStr){ return dateStr || isoToday(); }
+
+  function formatDatePretty(iso){
+    if(!iso) return "";
+    const [y,m,d] = iso.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m-1, d));
+    return dt.toLocaleDateString(undefined, { year:"numeric", month:"short", day:"2-digit" });
+  }
+
+  function normalizeSection(s){
+    const x = String(s||"").toLowerCase();
+    if(x.includes("break")) return "Breakfast";
+    if(x.includes("lunch")) return "Lunch";
+    if(x.includes("snack")) return "Snack";
+    if(x.includes("dinner")) return "Dinner";
+    if(x.includes("water")) return "Water";
+    return "Other";
+  }
+
+  function numOrNull(v){
+    const s = String(v??"").trim();
+    if(!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  function clamp0(n){
+    const x = Number(n)||0;
+    return Math.max(0, Math.round(x*10)/10);
+  }
+
+  function totals(entries){
+    const t = { kcal:0, p:0, c:0, f:0, water:0 };
+    for(const e of entries){
+      if(e.section==="Water"){ t.water += Number(e.waterMl)||0; continue; }
+      t.kcal += Number(e.macros?.kcal)||0;
+      t.p += Number(e.macros?.p)||0;
+      t.c += Number(e.macros?.c)||0;
+      t.f += Number(e.macros?.f)||0;
+    }
+    return t;
+  }
+
+  function renderWaterButtons(){
+    const btns = $("waterBtns");
+    btns.innerHTML = "";
+    [250,500,750,1000].forEach(ml=>{
+      const b = document.createElement("button");
+      b.className = "ghost smallBtn";
+      b.type = "button";
+      b.textContent = ml + " ml";
+      b.addEventListener("click", ()=>{ $("waterMl").value = String(ml); $("waterMl").focus(); });
+      btns.appendChild(b);
+    });
+  }
+
+  function setMode(){
+    const section = normalizeSection($("section").value);
+    $("waterBox").style.display = section === "Water" ? "block" : "none";
+    $("foodBox").style.display  = section === "Water" ? "none"  : "block";
+  }
+
+  function fillMacroInputs(m){
+    if(m.kcal!=null) $("mKcal").value = String(Math.round(m.kcal));
+    if(m.p!=null)    $("mP").value    = String(Math.round(m.p*10)/10);
+    if(m.c!=null)    $("mC").value    = String(Math.round(m.c*10)/10);
+    if(m.f!=null)    $("mF").value    = String(Math.round(m.f*10)/10);
+  }
+
+  function clearMacroInputs(){
+    $("mKcal").value="";
+    $("mP").value="";
+    $("mC").value="";
+    $("mF").value="";
+  }
+
+  // Permanent parser: handles messy GPT pastes
+  function parsePaste(text){
+    const raw = String(text||"")
+      .replace(/\r\n/g, "\n")
+      .replace(/\r/g, "\n")
+      .trim();
+    if(!raw) return null;
+
+    const lines = raw.split("\n").map(l=>String(l||"").trim());
+
+    let section = null;
+    let mealIdx = -1;
+    for(let i=0;i<lines.length;i++){
+      const ln = lines[i];
+      if(!ln) continue;
+      const u = ln.toUpperCase();
+      if(u.startsWith("MEAL:")){
+        mealIdx = i;
+        let after = ln.slice(5).trim();
+        const foodPos = after.toUpperCase().indexOf("FOOD:");
+        if(foodPos >= 0) after = after.slice(0, foodPos).trim();
+        section = normalizeSection(after);
+        break;
+      }
+    }
+
+    const strip = (s)=>{
+      let x = String(s||"").trim();
+      if(!x) return "";
+      if(x.startsWith("-")) x = x.slice(1).trim();
+      if(x.startsWith("•")) x = x.slice(1).trim();
+      x = x.replace(/^\d+[\).]\s*/, "");
+      return x.trim();
+    };
+
+    const items = [];
+    let inFood = false;
+    let sawFood = false;
+
+    for(let i=0;i<lines.length;i++){
+      const ln = lines[i];
+      if(!ln) continue;
+      const u = ln.toUpperCase();
+
+      const foodAt = u.indexOf("FOOD:");
+      if(foodAt >= 0){
+        sawFood = true;
+        inFood = true;
+        const rest = strip(ln.slice(foodAt + 5));
+        if(rest) items.push(rest);
+        continue;
+      }
+
+      if(u.startsWith("MACROS:")){
+        inFood = false;
+        continue;
+      }
+
+      if(inFood){
+        const cleaned = strip(ln);
+        if(cleaned) items.push(cleaned);
+      }
+    }
+
+    if(!sawFood){
+      const start = mealIdx >= 0 ? mealIdx + 1 : 0;
+      for(let i=start;i<lines.length;i++){
+        const ln = lines[i];
+        if(!ln) continue;
+        const u = ln.toUpperCase();
+        if(u.startsWith("MACROS:")) break;
+        const cleaned = strip(ln);
+        if(cleaned) items.push(cleaned);
+      }
+    }
+
+    let scan = raw.toLowerCase();
+    for(const ln of lines){
+      if(ln.toUpperCase().startsWith("MACROS:")){
+        scan = ln.slice(7).trim().toLowerCase();
+        break;
+      }
+    }
+
+    const pick = (...res)=>{
+      for(const r of res){
+        const m = scan.match(r);
+        if(m && m[1]!=null){
+          const n = Number(m[1]);
+          if(Number.isFinite(n)) return n;
+        }
+      }
+      return null;
+    };
+
+    const kcal = pick(
+      /\bkcal\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)/,
+      /([0-9]+(?:\.[0-9]+)?)\s*kcal\b/,
+      /\bcalories\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)/
+    );
+
+    const p = pick(
+      /\bprotein\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)/,
+      /\bp\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)\s*g?\b/
+    );
+
+    const c = pick(
+      /\bcarbs?\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)/,
+      /\bc\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)\s*g?\b/
+    );
+
+    const f = pick(
+      /\bfat\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)/,
+      /\bf\s*[:=]?\s*([0-9]+(?:\.[0-9]+)?)\s*g?\b/
+    );
+
+    return { section, items, macros:{kcal,p,c,f} };
+  }
+
+  function entryToGpt(e){
+    const time = e.time ? " (" + e.time + ")" : "";
+    if(e.section === "Water") return "WATER: " + e.waterMl + " ml" + time;
+
+    const items = (e.items||[]).filter(Boolean).map(i=>"- " + i).join(NL);
+    const base = "MEAL: " + e.section + time + NL + "Food:" + NL + items;
+
+    const m = e.macros || {};
+    const parts = [];
+    if(Number(m.kcal)>0) parts.push("kcal " + Math.round(m.kcal));
+    if(Number(m.p)>0)    parts.push("P " + clamp0(m.p) + "g");
+    if(Number(m.c)>0)    parts.push("C " + clamp0(m.c) + "g");
+    if(Number(m.f)>0)    parts.push("F " + clamp0(m.f) + "g");
+
+    return parts.length ? (base + NL + "Macros: " + parts.join(" | ")) : base;
+  }
+
+  function entryToSimple(e){
+    const time = e.time ? " · " + e.time : "";
+    if(e.section === "Water") return "Water" + time + ": " + e.waterMl + " ml";
+    const m = e.macros || {};
+    return e.section + time + ": " + Math.round(m.kcal||0) + " kcal | P " + clamp0(m.p||0) + "g | C " + clamp0(m.c||0) + "g | F " + clamp0(m.f||0) + "g";
+  }
+
+  function csvEscape(x){
+    const s = String(x ?? "");
+    return '"' + s.replace(/"/g,'""').replace(/\r?\n/g,' ') + '"';
+  }
+
+  function entryToCsvRow(day, e){
+    if(e.section === "Water"){
+      return [day,"Water",(e.time||""),e.waterMl,"","","","",""]
+        .map(csvEscape).join(",");
+    }
+    const m = e.macros || {};
+    return [
+      day,
+      e.section,
+      (e.time||""),
+      "",
+      Math.round(m.kcal||0),
+      clamp0(m.p||0),
+      clamp0(m.c||0),
+      clamp0(m.f||0),
+      (e.items||[]).join("; ")
+    ].map(csvEscape).join(",");
+  }
+
+  function buildDayClose(state, day){
+    const entries = (state.days?.[day]?.entries || []);
+    const t = totals(entries);
+    const targets = state.targets || {};
+
+    const rem = {
+      kcal: targets.kcal!=null ? Math.max(0, targets.kcal - t.kcal) : null,
+      p:    targets.p!=null    ? Math.max(0, targets.p - t.p)       : null,
+      c:    targets.c!=null    ? Math.max(0, targets.c - t.c)       : null,
+      f:    targets.f!=null    ? Math.max(0, targets.f - t.f)       : null,
+      water:targets.water!=null? Math.max(0, targets.water - t.water): null,
+    };
+
+    const out = [];
+    out.push("DATE: " + formatDatePretty(day));
+    out.push("");
+    out.push("DAY CLOSE");
+    out.push("Calories: " + Math.round(t.kcal) + " kcal" + (rem.kcal==null?"":" (remaining " + Math.round(rem.kcal) + ")"));
+    out.push("Protein: " + clamp0(t.p) + " g" + (rem.p==null?"":" (remaining " + clamp0(rem.p) + ")"));
+    out.push("Carbs: " + clamp0(t.c) + " g" + (rem.c==null?"":" (remaining " + clamp0(rem.c) + ")"));
+    out.push("Fat: " + clamp0(t.f) + " g" + (rem.f==null?"":" (remaining " + clamp0(rem.f) + ")"));
+    out.push("Water: " + Math.round(t.water) + " ml" + (rem.water==null?"":" (remaining " + Math.round(rem.water) + ")"));
+    out.push("");
+    out.push("Entries:");
+    for(const e of entries){
+      if(e.section === "Water") out.push("- WATER: " + e.waterMl + " ml" + (e.time?" ("+e.time+")":""));
+      else out.push("- " + e.section + (e.time?" ("+e.time+")":"") + ": " + Math.round(e.macros?.kcal||0) + " kcal");
+    }
+    return out.join(NL).trim();
+  }
+
+  function buildExport(state, day, format){
+    const entries = (state.days?.[day]?.entries || []);
+
+    if(format === "csv"){
+      const lines = [
+        ["date","section","time","water_ml","kcal","protein_g","carbs_g","fat_g","items"].map(csvEscape).join(",")
+      ];
+      for(const e of entries) lines.push(entryToCsvRow(day, e));
+      return lines.join(NL);
+    }
+
+    if(format === "dayclose") return buildDayClose(state, day);
+
+    const out = ["DATE: " + formatDatePretty(day), ""];
+    for(const e of entries){
+      out.push(format === "simple" ? entryToSimple(e) : entryToGpt(e));
+      out.push("");
+    }
+    return out.join(NL).trim();
+  }
+
+  function openModal(id){ $(id).classList.add("show"); }
+  function closeModal(id){ $(id).classList.remove("show"); }
+
+  async function copyToClipboard(text){
+    const t = String(text||"").trim();
+    if(!t) return;
+    try{ await navigator.clipboard.writeText(t); }
+    catch{
+      const ta = $("export");
+      ta.value = t;
+      ta.removeAttribute("readonly");
+      ta.select();
+      document.execCommand("copy");
+      ta.setAttribute("readonly","");
+    }
+  }
+
+  function render(){
+    const state = ensureState(loadState());
+    const day = getDayKey($("date").value);
+    ensureDay(state, day);
+
+    $("todayLabel").textContent = formatDatePretty(day);
+
+    const entries = state.days[day].entries;
+    const t = totals(entries);
+    const targets = state.targets;
+
+    const rem = {
+      kcal: targets.kcal!=null ? Math.max(0, targets.kcal - t.kcal) : null,
+      p:    targets.p!=null    ? Math.max(0, targets.p - t.p)       : null,
+      c:    targets.c!=null    ? Math.max(0, targets.c - t.c)       : null,
+      f:    targets.f!=null    ? Math.max(0, targets.f - t.f)       : null,
+      water:targets.water!=null? Math.max(0, targets.water - t.water): null,
+    };
+
+    $("kpiKcal").textContent = String(Math.round(t.kcal));
+    $("kpiKcalRem").textContent = rem.kcal==null ? "—" : String(Math.round(rem.kcal));
+    $("kpiWater").textContent = String(Math.round(t.water));
+    $("kpiWaterRem").textContent = rem.water==null ? "—" : String(Math.round(rem.water));
+
+    $("kpiP").textContent = String(clamp0(t.p));
+    $("kpiC").textContent = String(clamp0(t.c));
+    $("kpiF").textContent = String(clamp0(t.f));
+
+    $("kpiPRem").textContent = rem.p==null ? "—" : String(clamp0(rem.p));
+    $("kpiCRem").textContent = rem.c==null ? "—" : String(clamp0(rem.c));
+    $("kpiFRem").textContent = rem.f==null ? "—" : String(clamp0(rem.f));
+
+    const anyTargets = [targets.kcal, targets.p, targets.c, targets.f, targets.water].some(v=>v!=null);
+    $("targetsHint").textContent = anyTargets
+      ? "Targets: " + (targets.kcal!=null ? targets.kcal + " kcal" : "—")
+        + " · " + (targets.p!=null ? targets.p + "g P" : "—")
+        + " · " + (targets.c!=null ? targets.c + "g C" : "—")
+        + " · " + (targets.f!=null ? targets.f + "g F" : "—")
+        + " · " + (targets.water!=null ? targets.water + " ml water" : "—")
+      : "No targets set. Remaining will show as —.";
+
+    const list = $("list");
+    list.innerHTML = "";
+
+    entries.slice().reverse().forEach((e, idxFromEnd)=>{
+      const idx = entries.length - 1 - idxFromEnd;
+      const div = document.createElement("div");
+      div.className = "entry";
+      const time = e.time ? " · " + e.time : "";
+
+      let macroLine = "";
+      if(e.section !== "Water"){
+        const m = e.macros || {};
+        macroLine = '<div class="meta">Macros: ' + Math.round(m.kcal||0) + ' kcal · ' + clamp0(m.p||0) + 'g P · ' + clamp0(m.c||0) + 'g C · ' + clamp0(m.f||0) + 'g F</div>';
+      }
+
+      const itemsText = e.section==="Water"
+        ? (e.waterMl + " ml water")
+        : (e.items||[]).map(x=>"- " + x).join(NL);
+
+      const safeItems = itemsText
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;");
+
+      div.innerHTML =
+        '<div class="entryTop">'
+          + '<div class="badge">' + e.section + time + '</div>'
+          + '<button class="danger" type="button" data-del="' + idx + '">Delete</button>'
+        + '</div>'
+        + '<div class="items">' + safeItems + '</div>'
+        + (e.section==="Water" ? "" : macroLine);
+
+      list.appendChild(div);
+    });
+
+    list.querySelectorAll("button[data-del]").forEach(btn=>{
+      btn.addEventListener("click", ()=>{
+        const i = Number(btn.getAttribute("data-del"));
+        const st = ensureState(loadState());
+        const d = getDayKey($("date").value);
+        ensureDay(st, d);
+        st.days[d].entries.splice(i,1);
+        saveState(st);
+        render();
+      });
+    });
+
+    const fmt = $("exportFormat")?.value || "dayclose";
+    $("export").value = buildExport(state, day, fmt);
+
+    $("tKcal").value = targets.kcal ?? "";
+    $("tP").value = targets.p ?? "";
+    $("tC").value = targets.c ?? "";
+    $("tF").value = targets.f ?? "";
+    $("tWater").value = targets.water ?? "";
+  }
+
+  function init(){
+    $("exportFormat") && ($("exportFormat").value = "dayclose");
+    $("date").value = isoToday();
+    renderWaterButtons();
+    setMode();
+
+    $("section").addEventListener("change", setMode);
+
+    $("waterPreset").addEventListener("change", ()=>{
+      const v = $("waterPreset").value;
+      if(v){ $("waterMl").value = v; $("waterMl").focus(); }
+    });
+
+    $("parseBtn").addEventListener("click", ()=>{
+      const parsed = parsePaste($("macroPaste").value);
+      if(!parsed){ $("parseHint").textContent = "Nothing to parse."; return; }
+
+      if(parsed.section){ $("section").value = parsed.section; setMode(); }
+      $("items").value = (parsed.items||[]).join(NL);
+      clearMacroInputs();
+      fillMacroInputs(parsed.macros||{});
+
+      const m = parsed.macros || {};
+      const hasAny = [m.kcal,m.p,m.c,m.f].some(v=>v!=null);
+      const hasItems = (parsed.items||[]).length > 0;
+
+      if(hasItems && hasAny) $("parseHint").textContent = "Parsed items + macros. Review then Add entry.";
+      else if(hasAny) $("parseHint").textContent = "Parsed macros. Items were empty. You can leave them or edit.";
+      else $("parseHint").textContent = "Parsed items. Could not find macros. Add macros then Add entry.";
+
+      toast("Parsed");
+    });
+
+    $("clearPasteBtn").addEventListener("click", ()=>{
+      $("macroPaste").value = "";
+      $("parseHint").textContent = "";
+      toast("Cleared");
+    });
+
+    $("addBtn").addEventListener("click", ()=>{
+      const st = ensureState(loadState());
+      const day = getDayKey($("date").value);
+      ensureDay(st, day);
+
+      const section = normalizeSection($("section").value);
+      const time = String($("time").value||"").trim() || null;
+
+      if(section === "Water"){
+        const ml = numOrNull($("waterMl").value);
+        if(ml==null || ml<=0){ toast("Enter water (ml)"); return; }
+        st.days[day].entries.push({ section:"Water", time, waterMl: ml, createdAt: Date.now() });
+        $("waterMl").value = "";
+        $("waterPreset").value = "";
+        saveState(st);
+        render();
+        toast("Added");
+        return;
+      }
+
+      const pasted = $("macroPaste").value;
+      const parsed = pasted.trim() ? parsePaste(pasted) : null;
+
+      let items = $("items").value.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
+      if(!items.length && parsed && parsed.items && parsed.items.length){
+        items = parsed.items;
+        $("items").value = items.join(NL);
+      }
+      if(!items.length) items = ["Meal (from GPT)"];
+
+      let kcal = numOrNull($("mKcal").value);
+      let p = numOrNull($("mP").value);
+      let c = numOrNull($("mC").value);
+      let f = numOrNull($("mF").value);
+
+      const inputsEmpty = (kcal==null && p==null && c==null && f==null);
+      if(inputsEmpty && parsed && parsed.macros){
+        kcal = parsed.macros.kcal;
+        p = parsed.macros.p;
+        c = parsed.macros.c;
+        f = parsed.macros.f;
+        clearMacroInputs();
+        fillMacroInputs(parsed.macros);
+      }
+
+      const hasMacros = [kcal,p,c,f].some(v=>v!=null);
+      if(!hasMacros){ toast("Macros required. Include a Macros line."); return; }
+
+      const macros = {
+        kcal: Number(kcal)||0,
+        p: Number(p)||0,
+        c: Number(c)||0,
+        f: Number(f)||0,
+      };
+
+      st.days[day].entries.push({ section, time, items, macros, createdAt: Date.now() });
+      saveState(st);
+      render();
+      toast("Added");
+    });
+
+    $("refreshExportBtn")?.addEventListener("click", ()=>{ render(); toast("Export updated"); });
+    $("exportFormat")?.addEventListener("change", ()=>{ render(); toast("Format set"); });
+
+    $("copyBtn").addEventListener("click", async ()=>{
+      const st = ensureState(loadState());
+      const day = getDayKey($("date").value);
+      ensureDay(st, day);
+      const fmt = $("exportFormat")?.value || "gpt";
+      $("export").value = buildExport(st, day, fmt);
+      await copyToClipboard($("export").value);
+      toast("Copied");
+    });
+
+    $("closeDayBtn")?.addEventListener("click", async ()=>{
+      const st = ensureState(loadState());
+      const day = getDayKey($("date").value);
+      ensureDay(st, day);
+      if($("exportFormat")) $("exportFormat").value = "dayclose";
+      $("export").value = buildExport(st, day, "dayclose");
+      await copyToClipboard($("export").value);
+      toast("Day close copied");
+    });
+
+    $("clearBtn").addEventListener("click", ()=>{
+      const st = ensureState(loadState());
+      const day = getDayKey($("date").value);
+      ensureDay(st, day);
+      st.days[day].entries = [];
+      saveState(st);
+      render();
+      toast("Cleared");
+    });
+
+    $("settingsBtn").addEventListener("click", ()=>{ render(); openModal("settingsModal"); });
+    $("closeSettingsBtn").addEventListener("click", ()=>closeModal("settingsModal"));
+    $("settingsModal").addEventListener("click", (e)=>{ if(e.target === $("settingsModal")) closeModal("settingsModal"); });
+
+    $("saveSettingsBtn").addEventListener("click", ()=>{
+      const st = ensureState(loadState());
+      st.targets.kcal  = numOrNull($("tKcal").value);
+      st.targets.p     = numOrNull($("tP").value);
+      st.targets.c     = numOrNull($("tC").value);
+      st.targets.f     = numOrNull($("tF").value);
+      st.targets.water = numOrNull($("tWater").value);
+      saveState(st);
+      closeModal("settingsModal");
+      render();
+      toast("Saved");
+    });
+
+    $("resetTargetsBtn").addEventListener("click", ()=>{
+      const st = ensureState(loadState());
+      st.targets = { kcal:null, p:null, c:null, f:null, water:null };
+      saveState(st);
+      render();
+      toast("Targets reset");
+    });
+
+    render();
+  }
+
+  init();
+</script>
+
+<!--
+========================
+Create these files next to index.html
+========================
+
+File: manifest.json
+
+{
+  "name": "Meal Logger",
+  "short_name": "Meal Logger",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b1220",
+  "theme_color": "#111827",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
+
+File: sw.js
+
+const CACHE = 'meal-logger-pwa-v1';
+const ASSETS = [
+  './',
+  './index.html',
+  './manifest.json',
+  './icons/icon-192.png',
+  './icons/icon-512.png'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE).then(cache => cache.addAll(ASSETS)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then(keys => Promise.all(keys.map(k => (k === CACHE ? null : caches.delete(k))))).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+
+  event.respondWith(
+    caches.match(req).then(cached => {
+      if (cached) return cached;
+      return fetch(req).then(res => {
+        const copy = res.clone();
+        caches.open(CACHE).then(cache => cache.put(req, copy));
+        return res;
+      }).catch(() => caches.match('./index.html'));
+    })
+  );
+});
+
+Notes:
+- Put icons in /icons/icon-192.png and /icons/icon-512.png
+- Must be hosted over https (GitHub Pages works) for install + Add to Home Screen
+-->
+
+</body>
+</html>
